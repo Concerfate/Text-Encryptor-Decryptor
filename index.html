@@ -3,63 +3,137 @@
 <head>
     <title>Text Encryptor/Decryptor</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #6699cc;
-        }
-        #container {
-            width: 50%;
-            margin: auto;
-            text-align: center;
-        }
-        textarea, button {
-            width: 80%;
-            height: 50px;
-            margin: 10px 0;
-            font-size: 20px;
-            padding: 10px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
+       body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#container {
+    width: 80%;
+    max-width: 800px;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+textarea, button, input[type="text"] {
+    width: 100%;
+    height: 50px;
+    margin: 10px 0;
+    font-size: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    color: #333;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+input[type="checkbox"] {
+    width: auto;
+    height: auto;
+    margin: 10px 0;
+    padding: 0;
+}
+
+.error {
+    color: red;
+    border-color: red !important;
+}
+
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 </head>
 <body>
     <div id="container">
         <h1>Text Encryptor/Decryptor</h1>
         <textarea id="input" placeholder="Enter text here..."></textarea><br>
+        <input type="checkbox" id="encryptCheckbox"> Use custom key for encryption<br>
+        <input type="text" id="encryptKeyInput" placeholder="Enter custom key for encryption here..." style="display: none;"><br>
+        <input type="checkbox" id="decryptCheckbox"> Use custom key for decryption<br>
+        <input type="text" id="decryptKeyInput" placeholder="Enter custom key for decryption here..." style="display: none;"><br>
         <button onclick="encrypt()">Encrypt</button>
         <button onclick="decrypt()">Decrypt</button><br>
         <textarea id="output" placeholder="Output will appear here..."></textarea>
     </div>
 
     <script>
-        function caesarCipher(str, shift) {
-            return str.split('').map(function(char) {
-                var charCode = char.charCodeAt(0);
-                if (charCode >= 65 && charCode <= 90) {
-                    return String.fromCharCode((charCode - 65 + shift) % 26 + 65);
-                } else if (charCode >= 97 && charCode <= 122) {
-                    return String.fromCharCode((charCode - 97 + shift) % 26 + 97);
-                }
-                return char;
-            }).join('');
+        var defaultKey = CryptoJS.enc.Hex.parse('1234567890123456'); // The default key for encryption and decryption
+        var iv = CryptoJS.enc.Hex.parse('1234567890123456'); // The IV for encryption and decryption
+
+        function toggleCustomKey(checkboxId, keyInputId) {
+            var keyInput = document.getElementById(keyInputId);
+            if (document.getElementById(checkboxId).checked) {
+                keyInput.style.display = 'block';
+            } else {
+                keyInput.style.display = 'none';
+            }
+        }
+
+        document.getElementById('encryptCheckbox').onclick = function() {
+            toggleCustomKey('encryptCheckbox', 'encryptKeyInput');
+        }
+
+        document.getElementById('decryptCheckbox').onclick = function() {
+            toggleCustomKey('decryptCheckbox', 'decryptKeyInput');
         }
 
         function encrypt() {
             var input = document.getElementById('input').value;
-            document.getElementById('output').value = caesarCipher(input, 3);
+            var key = defaultKey;
+            var keyInput = document.getElementById('encryptKeyInput');
+            if (keyInput.style.display === 'block') {
+                if (keyInput.value.length > 0) {
+                    key = CryptoJS.enc.Hex.parse(CryptoJS.MD5(keyInput.value).toString());
+                } else {
+                    keyInput.placeholder = "Key must not be empty";
+                    keyInput.classList.add("error");
+                    return;
+                }
+            }
+            var encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(input), key, { iv: iv });
+            document.getElementById('output').value = encrypted.toString();
         }
 
         function decrypt() {
             var input = document.getElementById('input').value;
-            document.getElementById('output').value = caesarCipher(input, -3);
+            var key = defaultKey;
+            var keyInput = document.getElementById('decryptKeyInput');
+            if (keyInput.style.display === 'block') {
+                if (keyInput.value.length > 0) {
+                    key = CryptoJS.enc.Hex.parse(CryptoJS.MD5(keyInput.value).toString());
+                } else {
+                    keyInput.placeholder = "Key must not be empty";
+                    keyInput.classList.add("error");
+                    return;
+                }
+            }
+            try {
+                var decrypted = CryptoJS.AES.decrypt(input, key, { iv: iv });
+                document.getElementById('output').value = decrypted.toString(CryptoJS.enc.Utf8);
+            } catch (e) {
+                document.getElementById('output').value = "Error: Invalid key or encrypted message";
+                document.getElementById('output').classList.add("error");
+            }
         }
     </script>
 </body>
